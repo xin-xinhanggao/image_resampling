@@ -30,6 +30,14 @@ void checkrange(int rows, int cols, int &r, int &c)
 	}
 }
 
+void checkrgb(int &value)
+{
+	if(value < 0)
+		value = 0;
+	if(value > 255)
+		value = 255;
+}
+
 void nnresample(const Mat &origin, Mat &target, int trows, int tcols)
 {
 	int rows = origin.rows;
@@ -114,17 +122,6 @@ void biliresample(const Mat &origin, Mat &target, int trows, int tcols)
 		}
 }
 
-double Q(double x)
-{
-	if(x > 0)
-		return x;
-	return 0;
-}
-
-double P(double x)
-{
-	return (pow(Q(x + 2), 3) - 4 * pow(Q(x + 1), 3) - 6 * pow(Q(x), 3) - 4 * pow(Q(x - 1), 3)) / 6.0;
-}
 
 void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 {
@@ -155,28 +152,44 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 			int r = floor(rf);
 			int c = floor(cf);
 
-			double dr = rf - r;
-			double dc = cf - c;
+			double dr = rf - r; //b
+			double dc = cf - c; //a
 
-			target.at<Vec3b>(row - 1, col - 1) = Vec3b(0.0,0.0,0.0);
-			
-			double amount = 0.0;
+			double mcoe[4];
+			mcoe[0] = -1 * dr * (1 - dr) * (1 - dr);
+			mcoe[1] = 1 - 2 * dr * dr + dr * dr * dr;
+			mcoe[2] = dr * (1 + dr - dr * dr);
+			mcoe[3] = -1 * dr * dr * (1 - dr);
 
-			for(int m = -1; m <= 2; m++)
-				for(int n = -1; n <= 2; n++)
+			double ncoe[4];
+			ncoe[0] = -1 * dc * (1 - dc) * (1 - dc);
+			ncoe[1] = 1 - 2 * dc * dc + dc * dc * dc;
+			ncoe[2] = dc * (1 + dc - dc * dc);
+			ncoe[3] = -1 * dc * dc * (1 - dc);
+
+			double R = 0,G = 0,B = 0;
+			for(int n = -1; n <= 2; n++)
+				for(int m = -1; m <= 2; m++)
 				{
-					//int rpixel = r + m - 1;
-					//int cpixel = c + n - 1;
-					//checkrange(rows, cols, rpixel, cpixel, count);
+					int rpixel = r + m - 1;
+					int cpixel = c + n - 1;
 
-					int rpixel = r;
-					int cpixel = c;
 					checkrange(rows, cols, rpixel, cpixel);
 
-					amount += P(dr - m) * P(n - dc);
-					target.at<Vec3b>(row - 1, col - 1) += origin.at<Vec3b>(rpixel, cpixel) * P(dr - m) * P(n - dc);
-					//target.at<Vec3b>(row - 1, col - 1) += origin.at<Vec3b>(rpixel, cpixel) * P(dr - m) * P(n - dc);
+					double coe = mcoe[m + 1] * ncoe[n + 1];
+					R += origin.at<Vec3b>(rpixel, cpixel)[0] * coe;
+					G += origin.at<Vec3b>(rpixel, cpixel)[1] * coe;
+					B += origin.at<Vec3b>(rpixel, cpixel)[2] * coe;
+
 				}
-			std::cout<<amount<<std::endl;
+			//std::cout<<R<<" "<<G<<" "<<B<<std::endl;
+			int rvalue = floor(R);
+			int gvalue = floor(G);
+			int bvalue = floor(B);
+			checkrgb(rvalue);
+			checkrgb(gvalue);
+			checkrgb(bvalue);
+
+			target.at<Vec3b>(row - 1, col - 1) = Vec3b(rvalue, gvalue, bvalue);
 		}
 }
