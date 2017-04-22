@@ -5,6 +5,12 @@
 
 int main(int argc, char **argv)
 {
+	if(argc != 5)
+	{
+		std::cout<<"usage: ./resample origin_img target_height target_width algorithm_choice"<<std::endl;
+		std::cout<<"algorithm_choice: 0<-->nn  1<-->bili  2<-->bicubic"<<std::endl;
+		return 0;
+	}
 	cv::Mat origin = cv::imread(argv[1]);
 
 	int trows = atoi(argv[2]);
@@ -19,7 +25,7 @@ int main(int argc, char **argv)
 
 	cv::imwrite("target.png", target);
 
-	std::cout<<PSNR(origin, target, choice)<<std::endl;
+	std::cout<<"PSNR: "<<PSNR(origin, target, choice)<<std::endl;
 
 	return 0;
 }
