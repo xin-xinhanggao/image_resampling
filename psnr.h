@@ -1,0 +1,1 @@
+double PSNR(Mat &origin, Mat &target, int choice);
