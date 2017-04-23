@@ -86,8 +86,8 @@ void biliresample(const Mat &origin, Mat &target, int trows, int tcols)
 
 	target = Mat(trows, tcols, CV_8UC3);
 
-	for(int row = 1; row <= trows; row++)
-		for(int col = 1; col <= tcols; col++)
+	for(int row = 0; row < trows; row++)
+		for(int col = 0; col < tcols; col++)
 		{
 			double rf = sr * row;
 			double cf = sc * col;
@@ -98,29 +98,51 @@ void biliresample(const Mat &origin, Mat &target, int trows, int tcols)
 			double dr = rf - r;
 			double dc = cf - c;
 
-			int rpixel = r - 1;
-			int cpixel = c - 1;
+			int rpixel = r;
+			int cpixel = c;
 			checkrange(rows, cols, rpixel, cpixel);
 
-			target.at<Vec3b>(row - 1, col - 1) = origin.at<Vec3b>(rpixel, cpixel) * (1 - dr) * (1 - dc);
+			double R = 0;
+			double G = 0;
+			double B = 0;
 
-			rpixel = r;
-			cpixel = c - 1;
-			checkrange(rows, cols, rpixel, cpixel);
+			R = double(origin.at<Vec3b>(rpixel, cpixel)[0]) * (1 - dr) * (1 - dc);
+			G = double(origin.at<Vec3b>(rpixel, cpixel)[1]) * (1 - dr) * (1 - dc);
+			B = double(origin.at<Vec3b>(rpixel, cpixel)[2]) * (1 - dr) * (1 - dc);
 
-			target.at<Vec3b>(row - 1, col - 1) += origin.at<Vec3b>(rpixel, cpixel) * dr * (1 - dc);
-
-			rpixel = r - 1;
+			rpixel = r + 1;
 			cpixel = c;
 			checkrange(rows, cols, rpixel, cpixel);
 
-			target.at<Vec3b>(row - 1, col - 1) += origin.at<Vec3b>(rpixel, cpixel) * (1 - dr) * dc;
+			R += double(origin.at<Vec3b>(rpixel, cpixel)[0]) * dr * (1 - dc);
+			G += double(origin.at<Vec3b>(rpixel, cpixel)[1]) * dr * (1 - dc);
+			B += double(origin.at<Vec3b>(rpixel, cpixel)[2]) * dr * (1 - dc);
 
 			rpixel = r;
-			cpixel = c;
+			cpixel = c + 1;
 			checkrange(rows, cols, rpixel, cpixel);
 
-			target.at<Vec3b>(row - 1, col - 1) += origin.at<Vec3b>(rpixel, cpixel) * dr * dc; 
+			R += double(origin.at<Vec3b>(rpixel, cpixel)[0]) * (1 - dr) * dc;
+			G += double(origin.at<Vec3b>(rpixel, cpixel)[1]) * (1 - dr) * dc;
+			B += double(origin.at<Vec3b>(rpixel, cpixel)[2]) * (1 - dr) * dc;
+
+
+			rpixel = r + 1;
+			cpixel = c + 1;
+			checkrange(rows, cols, rpixel, cpixel);
+
+			R += double(origin.at<Vec3b>(rpixel, cpixel)[0]) * dr * dc;
+			G += double(origin.at<Vec3b>(rpixel, cpixel)[1]) * dr * dc;
+			B += double(origin.at<Vec3b>(rpixel, cpixel)[2]) * dr * dc;
+
+			int rvalue = round(R);
+			int gvalue = round(G);
+			int bvalue = round(B);
+			checkrgb(rvalue);
+			checkrgb(gvalue);
+			checkrgb(bvalue);
+
+			target.at<Vec3b>(row, col) = Vec3b(rvalue, gvalue, bvalue);
 		}
 }
 
@@ -145,8 +167,8 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 
 	target = Mat(trows, tcols, CV_8UC3);
 
-	for(int row = 1; row <= trows; row++)
-		for(int col = 1; col <= tcols; col++)
+	for(int row = 0; row < trows; row++)
+		for(int col = 0; col < tcols; col++)
 		{
 			double rf = sr * row;
 			double cf = sc * col;
@@ -173,15 +195,15 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 			for(int n = -1; n <= 2; n++)
 				for(int m = -1; m <= 2; m++)
 				{
-					int rpixel = r + m - 1;
-					int cpixel = c + n - 1;
+					int rpixel = r + m;
+					int cpixel = c + n;
 
 					checkrange(rows, cols, rpixel, cpixel);
 
 					double coe = mcoe[m + 1] * ncoe[n + 1];
-					R += origin.at<Vec3b>(rpixel, cpixel)[0] * coe;
-					G += origin.at<Vec3b>(rpixel, cpixel)[1] * coe;
-					B += origin.at<Vec3b>(rpixel, cpixel)[2] * coe;
+					R += double(origin.at<Vec3b>(rpixel, cpixel)[0]) * coe;
+					G += double(origin.at<Vec3b>(rpixel, cpixel)[1]) * coe;
+					B += double(origin.at<Vec3b>(rpixel, cpixel)[2]) * coe;
 
 				}
 			int rvalue = floor(R);
@@ -191,7 +213,7 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 			checkrgb(gvalue);
 			checkrgb(bvalue);
 
-			target.at<Vec3b>(row - 1, col - 1) = Vec3b(rvalue, gvalue, bvalue);
+			target.at<Vec3b>(row, col) = Vec3b(rvalue, gvalue, bvalue);
 		}
 }
 
@@ -234,8 +256,7 @@ void lanczosresample(const Mat &origin, Mat &target, int trows, int tcols)
 
 	target = Mat(trows, tcols, CV_8UC3);
 
-	int band = 6;
-
+	int band = 8;
 	for(int row = 0; row < trows; row++)
 		for(int col = 0; col < tcols; col++)
 		{

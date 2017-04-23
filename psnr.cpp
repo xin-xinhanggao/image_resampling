@@ -11,15 +11,22 @@ double PSNR(Mat &origin, Mat &target, int choice)
 	int rows = origin.rows;
 	int cols = origin.cols;
 
-	resample(origin, recover, rows, cols, choice);
+	resample(target, recover, rows, cols, choice);
 
 	double psnr = 0.0;
 
 	for(int row = 0; row < rows; row++)
 		for(int col = 0; col < cols; col++)
-			psnr += origin.at<Vec3b>(row, col).dot(recover.at<Vec3b>(row, col));
+		{
 
-	psnr = psnr / rows / cols;
+			double delr = int(origin.at<Vec3b>(row, col)[0]) - int(recover.at<Vec3b>(row, col)[0]);
+			double delg = int(origin.at<Vec3b>(row, col)[1]) - int(recover.at<Vec3b>(row, col)[1]);
+			double delb = int(origin.at<Vec3b>(row, col)[2]) - int(recover.at<Vec3b>(row, col)[2]);
+
+			psnr += delr * delr + delg * delg + delb * delb;
+		}
+
+	psnr = psnr / rows / cols / 3;
 	psnr = 20 * log10(255 / sqrt(psnr));
 
 	return psnr;
