@@ -195,19 +195,23 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 		}
 }
 
+double sinc(double x)
+{
+	double Pi = 3.1415926;
+	return sin(Pi * x) / (Pi * x);
+}
+
 double L(double x, int band)
 {
-	int coe = 2 * band;
 
 	if(x >= band || -x > band)
 		return 0;
 
-	if(x < 0.0001 || x > -0.0001)
-		return 1.0 / coe;
+	if(x < 0.0001 && x > -0.0001)
+		return 1.0;
 
-	double Pi = 3.1415926;
-
-	return (band * sin(Pi * x) * sin(Pi * x / band)) / Pi / Pi / x / x / coe; 
+	
+	return sinc(x) * sinc(x / band);
 }
 
 void lanczosresample(const Mat &origin, Mat &target, int trows, int tcols)
@@ -230,7 +234,7 @@ void lanczosresample(const Mat &origin, Mat &target, int trows, int tcols)
 
 	target = Mat(trows, tcols, CV_8UC3);
 
-	int band = 2;
+	int band = 6;
 
 	for(int row = 0; row < trows; row++)
 		for(int col = 0; col < tcols; col++)
@@ -255,21 +259,23 @@ void lanczosresample(const Mat &origin, Mat &target, int trows, int tcols)
 			for(int i = 0; i < band * 2; i++)
 				checkrange(rows, cols, x[i], y[i]);
 
-						
+			double R = 0,G = 0,B = 0;
+
+			double amout = 0;
 			for(int k = 0; k < band * 2; k++)
 				for(int i = 0; i < band * 2; i++)
 				{
-					I[k] += L(xs - x[i], band) * origin.at<Vec3b>(x[i], y[k]);
+					double coe = L(xs - x[i], band) * L(ys - y[k], band);
+					R += origin.at<Vec3b>(x[i], y[k])[0] * coe;
+					G += origin.at<Vec3b>(x[i], y[k])[1] * coe;
+					B += origin.at<Vec3b>(x[i], y[k])[2] * coe;
+					amout += coe;
 				}
 
-			Vec3f color(0,0,0);
-			for(int k = 0; k < band * 2; k++)
-				color += L(ys - y[k], band) * I[k];
-			
 
-			int rvalue = round(color[0]);
-			int gvalue = round(color[1]);
-			int bvalue = round(color[2]);
+			int rvalue = floor(R / amout);
+			int gvalue = floor(G / amout);
+			int bvalue = floor(B / amout);
 			checkrgb(rvalue);
 			checkrgb(gvalue);
 			checkrgb(bvalue);
