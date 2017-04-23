@@ -8,6 +8,8 @@ void resample(const Mat &origin, Mat &target, int trows, int tcols, int choice)
 		biliresample(origin, target, trows, tcols);
 	else if(choice == 2)
 		bicubicresample(origin, target, trows, tcols);
+	else if(choice == 3)
+		lanczosresample(origin, target, trows, tcols);
 }
 
 void checkrange(int rows, int cols, int &r, int &c)
@@ -182,7 +184,6 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 					B += origin.at<Vec3b>(rpixel, cpixel)[2] * coe;
 
 				}
-			//std::cout<<R<<" "<<G<<" "<<B<<std::endl;
 			int rvalue = floor(R);
 			int gvalue = floor(G);
 			int bvalue = floor(B);
@@ -191,5 +192,88 @@ void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols)
 			checkrgb(bvalue);
 
 			target.at<Vec3b>(row - 1, col - 1) = Vec3b(rvalue, gvalue, bvalue);
+		}
+}
+
+double L(double x, int band)
+{
+	int coe = 2 * band;
+
+	if(x >= band || -x > band)
+		return 0;
+
+	if(x < 0.0001 || x > -0.0001)
+		return 1.0 / coe;
+
+	double Pi = 3.1415926;
+
+	return (band * sin(Pi * x) * sin(Pi * x / band)) / Pi / Pi / x / x / coe; 
+}
+
+void lanczosresample(const Mat &origin, Mat &target, int trows, int tcols)
+{
+	int rows = origin.rows;
+	int cols = origin.cols;
+
+	//scale coefficient
+	double sr,sc;
+
+	if(rows > trows)
+		sr = double(rows) / trows;
+	else
+		sr = double(rows - 1) / trows;
+
+	if(cols > tcols)
+		sc = double(cols) / tcols;
+	else
+		sc = double(cols - 1) / tcols;
+
+	target = Mat(trows, tcols, CV_8UC3);
+
+	int band = 2;
+
+	for(int row = 0; row < trows; row++)
+		for(int col = 0; col < tcols; col++)
+		{
+			double xs = sr * row;
+			double ys = sc * col;
+
+			int *x = new int[band * 2];
+			int *y = new int[band * 2];
+			Vec3f *I = new Vec3f[band * 2];
+
+			I[0] = Vec3f(0,0,0);
+			x[0] = floor(xs) - (band - 1);
+			y[0] = floor(ys) - (band - 1);
+			for(int i = 1; i < band * 2; i++)
+			{
+				I[i] = Vec3f(0, 0, 0);
+				x[i] = x[0] + i;
+				y[i] = y[0] + i;
+			}
+
+			for(int i = 0; i < band * 2; i++)
+				checkrange(rows, cols, x[i], y[i]);
+
+						
+			for(int k = 0; k < band * 2; k++)
+				for(int i = 0; i < band * 2; i++)
+				{
+					I[k] += L(xs - x[i], band) * origin.at<Vec3b>(x[i], y[k]);
+				}
+
+			Vec3f color(0,0,0);
+			for(int k = 0; k < band * 2; k++)
+				color += L(ys - y[k], band) * I[k];
+			
+
+			int rvalue = round(color[0]);
+			int gvalue = round(color[1]);
+			int bvalue = round(color[2]);
+			checkrgb(rvalue);
+			checkrgb(gvalue);
+			checkrgb(bvalue);
+
+			target.at<Vec3b>(row, col) = Vec3b(rvalue, gvalue, bvalue);
 		}
 }

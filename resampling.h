@@ -8,3 +8,5 @@ void nnresample(const Mat &origin, Mat &target, int trows, int tcols);
 void biliresample(const Mat &origin, Mat &target, int trows, int tcols);
 
 void bicubicresample(const Mat &origin, Mat &target, int trows, int tcols);
+
+void lanczosresample(const Mat &origin, Mat &target, int trows, int tcols);
